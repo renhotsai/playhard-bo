@@ -115,6 +115,7 @@ model Organization {
   teams       Team[]
   members     Member[]
   invitations Invitation[]
+  stores      Store[]
 
   @@unique([slug])
   @@map("organization")
@@ -145,4 +146,23 @@ model Invitation {
   user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
 
   @@map("invitation")
+}
+
+model Store {
+  id             String       @id @default(cuid())
+  name           String
+  address        String
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String?      @default("TW")
+  phone          String?
+  email          String?
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("store")
 }

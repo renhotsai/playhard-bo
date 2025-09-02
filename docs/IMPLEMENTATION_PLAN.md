@@ -548,13 +548,13 @@ export function DashboardLayout({ children }) {
 ### 1. Environment Variables
 ```env
 # bo/.env
-DATABASE_URL="postgres://postgres:playhard123@localhost:5432/playhard"
+DATABASE_URL="postgres://username:password@localhost:5432/database_name"
 BETTER_AUTH_SECRET="your-secret-key"
 BETTER_AUTH_URL="http://localhost:3001/api/auth"
 NEXT_PUBLIC_APP_URL="http://localhost:3001"
 
 # Resend Configuration
-RESEND_API_KEY="re_EoPf9JZW_CjG9HpPUPsVxqty735gFFaVc"
+RESEND_API_KEY="your-resend-api-key-here"
 ```
 
 ### 2. Package Dependencies

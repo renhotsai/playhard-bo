@@ -69,7 +69,7 @@ The dual role system for admin and organization shared pages has been successful
    # Use the create-admin API to create a system admin
    curl -X POST http://localhost:3000/api/create-admin \
      -H "Content-Type: application/json" \
-     -d '{"email": "admin@test.com"}'
+     -d '{"email": "admin@example.com"}'
    ```
 
 2. **Create Test Organization & Users** 

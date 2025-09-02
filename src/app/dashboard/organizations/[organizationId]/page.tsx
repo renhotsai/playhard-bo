@@ -25,32 +25,7 @@ interface Store {
   updatedAt: string;
 }
 
-const mockStores = [
-	{
-		id: "store-1",
-		name: "總店",
-		address: "台北市信義區信義路五段7號",
-		city: "台北市",
-		zipCode: "110",
-		phone: "(02) 2345-6789",
-		email: "main@example.com",
-		isActive: true,
-		createdAt: "2024-01-15T00:00:00Z",
-		updatedAt: "2024-03-10T00:00:00Z"
-	},
-	{
-		id: "store-2",
-		name: "分店一",
-		address: "台北市大安區敦化南路二段216號",
-		city: "台北市",
-		zipCode: "106",
-		phone: "(02) 2876-5432",
-		email: "branch1@example.com",
-		isActive: true,
-		createdAt: "2024-02-20T00:00:00Z",
-		updatedAt: "2024-03-15T00:00:00Z"
-	}
-];
+// Remove mock stores data - now using real data from database
 
 export default function OrganizationDetailPage() {
   const params = useParams();
@@ -80,14 +55,24 @@ export default function OrganizationDetailPage() {
 					organizationId: organizationId,
 				}
 			});
-			if (error) throw new Error(error.message); // 讓 React Query 捕捉錯誤
+			if (error) throw new Error(error.message);
 
-			return {
-				...data,
-				stores: mockStores
-			};
+			return data;
 		},
 		enabled: !!organizationId,
+	});
+
+	// Fetch stores for the organization
+	const { data: storesData, isLoading: isLoadingStores } = useQuery({
+		queryKey: ["organization", organizationId, "stores"],
+		queryFn: async () => {
+			const response = await fetch(`/api/organizations/${organizationId}/stores`);
+			if (!response.ok) {
+				throw new Error('Failed to fetch stores');
+			}
+			return response.json();
+		},
+		enabled: !!organizationId && !!organization,
 	});
 
 
@@ -177,7 +162,7 @@ export default function OrganizationDetailPage() {
               <div className="text-sm font-medium text-muted-foreground">門店數量</div>
               <div className="flex items-center gap-2">
                 <Store className="h-4 w-4" />
-                <span>{organization.stores?.length || 0} 家門店</span>
+                <span>{storesData?.stores?.length || 0} 家門店</span>
               </div>
             </div>
           </CardContent>
@@ -206,7 +191,12 @@ export default function OrganizationDetailPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {organization.stores && organization.stores.length > 0 ? (
+          {isLoadingStores ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground mt-2">載入門店資料中...</p>
+            </div>
+          ) : storesData?.stores && storesData.stores.length > 0 ? (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -221,7 +211,7 @@ export default function OrganizationDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {organization.stores.map((store) => (
+                  {storesData.stores.map((store) => (
                     <TableRow key={store.id}>
                       <TableCell className="font-medium">{store.name}</TableCell>
                       <TableCell>
