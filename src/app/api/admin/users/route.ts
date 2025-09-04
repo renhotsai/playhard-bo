@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { PrismaClient } from "@/generated/prisma";
+import { generateRandomString } from "better-auth/crypto";
+import { isSystemAdmin } from "@/lib/permissions";
 
 const prisma = new PrismaClient();
 
@@ -275,12 +277,14 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // 4. 創建用戶 - Better Auth signUpEmail method (correct API pattern)
-    const newUserResult = await auth.api.signUpEmail({
+    // 4. 創建用戶 - Better Auth compliant secure temporary password approach
+    const temporaryPassword = generateRandomString(32); // Better Auth crypto utility
+    const newUserResult = await auth.api.createUser({
       body: {
         email: email,
-        password: "TempPassword123!", // 臨時密碼，用戶透過 Magic Link 登入後會設置新密碼
         name: name,
+        password: temporaryPassword, // Secure temporary password (never exposed)
+        role: systemRole === 'admin' ? 'admin' : undefined,
       }
     });
 
@@ -291,12 +295,19 @@ export async function POST(request: NextRequest) {
     
     const newUser = newUserResult.user;
 
-    // 5. 使用Prisma直接更新用戶角色 (Better Auth doesn't support role in signUpEmail)
-    if (systemRole) {
-      await prisma.user.update({
-        where: { id: newUser.id },
-        data: { role: systemRole }
-      });
+    // 5. 觸發密碼重置流程 - Better Auth secure password setup
+    const resetResult = await auth.api.forgetPassword({
+      body: {
+        email: email,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/set-username`
+      }
+    });
+
+    if (!resetResult.status) {
+      console.error('[Admin Users API] Failed to send password reset email');
+      // Don't fail the entire operation, just log the error
+    } else {
+      console.log('[Admin Users API] Password reset email sent successfully');
     }
 
     // 6. 處理組織相關邏輯

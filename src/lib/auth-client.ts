@@ -28,5 +28,13 @@ export const {
   signUp,
   organization,
   admin,
-  magicLink
+  magicLink,
+  // Organization hooks with proper types
+  useListOrganizations,
+  useActiveOrganization
 } = authClient;
+
+// Type inference helpers for auth client hooks
+export type AuthSession = NonNullable<ReturnType<typeof useSession>['data']>;
+export type AuthOrganization = NonNullable<ReturnType<typeof useListOrganizations>['data']>[number];
+export type AuthActiveOrganization = NonNullable<ReturnType<typeof useActiveOrganization>['data']>;

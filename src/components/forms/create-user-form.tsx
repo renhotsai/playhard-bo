@@ -6,6 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  FormControl,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
@@ -366,20 +372,23 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
         }}
       >
         {(field) => (
-          <div className="space-y-2">
-            <Label htmlFor="name">姓名 *</Label>
-            <Input
-              id="name"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              placeholder="輸入用戶姓名"
-            />
-            {field.state.meta.errors.length > 0 && (
-              <p className="text-sm text-destructive">
-                {field.state.meta.errors[0]}
-              </p>
-            )}
-          </div>
+          <FormItem>
+            <FormLabel htmlFor="name">姓名 *</FormLabel>
+            <FormControl>
+              <Input
+                id="name"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="輸入用戶姓名"
+                aria-describedby={field.state.meta.errors.length > 0 ? "name-error" : undefined}
+                aria-invalid={field.state.meta.errors.length > 0}
+                aria-required="true"
+              />
+            </FormControl>
+            <FormMessage id="name-error">
+              {field.state.meta.errors[0]}
+            </FormMessage>
+          </FormItem>
         )}
       </form.Field>
 
@@ -392,21 +401,24 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
         }}
       >
         {(field) => (
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              placeholder="輸入 Email 地址"
-            />
-            {field.state.meta.errors.length > 0 && (
-              <p className="text-sm text-destructive">
-                {field.state.meta.errors[0]}
-              </p>
-            )}
-          </div>
+          <FormItem>
+            <FormLabel htmlFor="email">Email *</FormLabel>
+            <FormControl>
+              <Input
+                id="email"
+                type="email"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="輸入 Email 地址"
+                aria-describedby={field.state.meta.errors.length > 0 ? "email-error" : undefined}
+                aria-invalid={field.state.meta.errors.length > 0}
+                aria-required="true"
+              />
+            </FormControl>
+            <FormMessage id="email-error">
+              {field.state.meta.errors[0]}
+            </FormMessage>
+          </FormItem>
         )}
       </form.Field>
 

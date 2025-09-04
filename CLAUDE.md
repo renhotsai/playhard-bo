@@ -167,14 +167,36 @@ RESEND_API_KEY="your-resend-api-key"
 
 ## Development Patterns
 
-**Agent Consultation Requirements:**
-- **Better Auth**: For ALL authentication-related implementations, ALWAYS consult the better-auth-validator agent first
-- **shadcn/ui**: For ALL UI component implementations, ALWAYS consult the shadcn-ui-designer agent first
-- **TanStack**: For query, table, and form implementations, ALWAYS consult the tanstack-expert agent first
-  - React Query (server state management)
-  - React Table (data tables and datagrids) 
-  - React Form (form state management and validation)
-- **Next.js**: For project structure, routing, and Next.js best practices, ALWAYS consult the nextjs-compliance-checker agent first
+**Implementation Process Requirements:**
+**MANDATORY**: Before implementing any feature or fixing any issue, MUST follow this process:
+
+1. **Categorize the Problem First**: Identify which domain the implementation belongs to:
+   - Authentication/Authorization → Better Auth domain
+   - UI Components/Styling → shadcn/ui domain  
+   - Data Management/State → TanStack domain
+   - Project Structure/Routing → Next.js domain
+   - Database Operations → Prisma domain
+
+2. **Consult Appropriate Agent**: Based on categorization, ALWAYS consult the relevant specialized agent first:
+   - **Better Auth**: `better-auth-validator` agent for ALL authentication-related implementations
+   - **shadcn/ui**: `shadcn-ui-designer` agent for ALL UI component implementations
+   - **TanStack**: `tanstack-expert` agent for query, table, and form implementations
+     - React Query (server state management)
+     - React Table (data tables and datagrids) 
+     - React Form (form state management and validation)
+   - **Next.js**: `nextjs-compliance-checker` agent for project structure, routing, and Next.js best practices
+   - **Prisma**: Use built-in Prisma knowledge for database schema and query patterns
+
+3. **Get Agent Guidance**: Allow the specialized agent to provide proper implementation patterns and best practices before proceeding
+
+4. **Implement with Agent Recommendations**: Follow the agent's guidance exactly to ensure compliance with framework standards
+
+**Why This Process is Critical:**
+- Prevents architectural coupling issues (like custom interfaces instead of framework-native types)
+- Ensures framework compliance and best practices
+- Reduces debugging time and technical debt
+- Maintains consistency across the codebase
+- Leverages specialized knowledge for each domain
 
 **Better Auth Development Guidelines:**
 - **CRITICAL**: For ALL authentication-related implementations, ALWAYS consult the better-auth-validator agent first

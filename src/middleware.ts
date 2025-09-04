@@ -1,27 +1,30 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
+import { isSystemAdmin } from "@/lib/permissions";
 
 /**
- * Next.js Middleware for Better Auth
- * Follows Next.js 15 best practices
+ * Next.js Middleware for Better Auth with proper session validation
+ * Follows Next.js 15 and Better Auth best practices
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/api/auth'];
+  const publicRoutes = ['/login', '/api/auth', '/set-username'];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
   
   if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // Check Better Auth session cookie
-  const sessionToken = request.cookies.get("better-auth.session_token");
-  const isAuthenticated = !!sessionToken?.value;
-  
-  // Handle protected routes
-  if (pathname.startsWith("/dashboard")) {
-    if (!isAuthenticated) {
+  try {
+    // PROPER Better Auth session validation
+    const session = await auth.api.getSession({
+      headers: request.headers
+    });
+
+    // If no valid session, redirect to login
+    if (!session?.user) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);
@@ -29,23 +32,25 @@ export async function middleware(request: NextRequest) {
 
     // Admin routes require system admin role
     if (pathname.startsWith("/dashboard/admin")) {
-      // For admin routes, we need to validate the session on server side
-      // Since we can't decode the session here, we'll let the API handle validation
-      // and redirect if needed. The UI will also hide admin sections for non-admins.
+      if (!isSystemAdmin(session.user.role)) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
     }
-  }
-  
-  // Redirect authenticated users from root to dashboard
-  if (pathname === "/" && isAuthenticated) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-  
-  // Redirect unauthenticated users from root to login
-  if (pathname === "/" && !isAuthenticated) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
 
-  return NextResponse.next();
+    // Redirect authenticated users from root to dashboard
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    return NextResponse.next();
+    
+  } catch (error) {
+    // Session validation failed, redirect to login
+    console.error("Session validation error:", error);
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 }
 
 // Optimize matcher to follow Next.js recommendations

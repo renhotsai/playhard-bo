@@ -9,6 +9,7 @@ import { Users, UserPlus, Building2, Mail, Calendar } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import type { Member, User } from "@/generated/prisma";
 
 type MemberWithUser = Member & {
@@ -23,7 +24,7 @@ export default function UsersPage() {
 
 	// Fetch organization members for active organization
 	const { data: orgData, isLoading: isLoadingMembers } = useQuery({
-		queryKey: ['organization-members', activeOrganization?.id, isSystemAdmin],
+		queryKey: queryKeys.organizations.members(activeOrganization?.id || ''),
 		queryFn: async () => {
 			if (!activeOrganization?.id) return null;
 

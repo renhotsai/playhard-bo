@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 // Simple validation functions
 const validateName = (value: string) => {
@@ -37,7 +38,7 @@ interface CreateOrgUserFormProps {
 export function CreateOrgUserForm({ onSuccess, defaultOrganizationId }: CreateOrgUserFormProps) {
   // Fetch organizations for select dropdown
   const { data: organizationsData, isLoading: isLoadingOrgs } = useQuery({
-    queryKey: ['organizations'],
+    queryKey: queryKeys.organizations.list(),
     queryFn: async () => {
       const response = await fetch('/api/organizations', {
         credentials: 'include'

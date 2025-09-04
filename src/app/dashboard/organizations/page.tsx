@@ -10,13 +10,15 @@ import { isSystemAdmin } from "@/lib/permissions";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
+import { queryKeys } from "@/lib/query-keys";
+import type { OrganizationWithCounts } from "@/lib/types";
 
 
 export default function OrganizationsPage() {
-	const {data: session, isPending} = authClient.useSession()
+	const { data: session, isPending } = authClient.useSession();
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 	const router = useRouter();
-  const isAdmin = isSystemAdmin(session?.user.role || '');
+	const isAdmin = isSystemAdmin(session?.user.role || '');
 
 	// Redirect non-admin users to their active organization details
 	useEffect(() => {
@@ -31,19 +33,20 @@ export default function OrganizationsPage() {
 
 	// Admin users: fetch all organizations
 	const { data: organizationsData, isLoading, error } = useQuery({
-		queryKey: ['organizations', 'all'],
-		queryFn: async () => {
-			// System admin uses custom API to see all organizations
+		queryKey: queryKeys.organizations.list(),
+		queryFn: async (): Promise<OrganizationWithCounts[]> => {
 			const response = await fetch('/api/admin/organizations');
 			if (!response.ok) {
-				throw new Error('Failed to fetch organizations');
+				const errorText = await response.text();
+				throw new Error(`Failed to fetch organizations: ${response.status} ${errorText}`);
 			}
 			const data = await response.json();
-			return data.organizations;
+			return data.organizations as OrganizationWithCounts[];
 		},
-		enabled: !isPending && isAdmin, // Only run for admin users
+		enabled: !isPending && isAdmin,
+		staleTime: 5 * 60 * 1000, // 5 minutes
+		gcTime: 10 * 60 * 1000, // 10 minutes
 	});
-
 
 	// Show loading while checking permissions
 	if (isPending) {
@@ -59,7 +62,6 @@ export default function OrganizationsPage() {
 		return null;
 	}
 
-	// Render admin organizations list view
 	return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -98,12 +100,14 @@ export default function OrganizationsPage() {
           ) : error ? (
             <div className="text-center py-8 text-red-500">
               <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Failed to load organizations</p>
-              <p className="text-sm">{error instanceof Error ? error.message : 'Unknown error'}</p>
+              <p className="font-semibold mb-2">Failed to load organizations</p>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : 'An unexpected error occurred'}
+              </p>
             </div>
-          ) : organizationsData?.length > 0 ? (
+          ) : organizationsData && organizationsData.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {organizationsData.map((org: { id: string; name: string; createdAt: string; _count?: { members: number } }) => (
+              {organizationsData.map((org) => (
                 <Card key={org.id} className="border-border hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -115,7 +119,11 @@ export default function OrganizationsPage() {
                   </CardHeader>
                   <CardContent className="pt-0 space-y-2">
                     <div className="text-sm text-muted-foreground">
-                      Created: {new Date(org.createdAt).toLocaleDateString('zh-TW')}
+                      Created: {new Date(org.createdAt).toLocaleDateString('zh-TW', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
                     </div>
                     <div className="flex gap-2 pt-2">
                       <Button variant="outline" size="sm" asChild>
@@ -143,10 +151,10 @@ export default function OrganizationsPage() {
         </CardContent>
       </Card>
       
-      <div className="flex gap-4 text-sm text-muted-foreground">
-        <p>
-          As a system administrator, you can view all organizations, 
-          manage their settings, and access their members.
+      <div className="rounded-lg bg-muted/50 p-4">
+        <p className="text-sm text-muted-foreground">
+          <strong>System Administrator:</strong> You have full access to view all organizations,
+          manage their settings, and access their member information.
         </p>
       </div>
     </div>

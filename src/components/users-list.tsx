@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   useReactTable,
   getCoreRowModel,
@@ -12,7 +13,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,11 +83,11 @@ export function UsersList({
   const [globalFilter, setGlobalFilter] = useState("");
 
   const { data: users = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['users'],
+    queryKey: queryKeys.admin.allUsers(),
     queryFn: fetchUsers,
   });
 
-  const getRoleIcon = (role?: string) => {
+  const getRoleIcon = useCallback((role?: string) => {
     switch (role) {
       case 'admin':
         return <Crown className="h-4 w-4" />;
@@ -101,9 +102,9 @@ export function UsersList({
       default:
         return <User className="h-4 w-4" />;
     }
-  };
+  }, []);
 
-  const getRoleBadge = (role?: string) => {
+  const getRoleBadge = useCallback((role?: string) => {
     switch (role) {
       case 'admin':
         return <Badge variant="destructive">Admin</Badge>;
@@ -118,9 +119,11 @@ export function UsersList({
       default:
         return <Badge variant="outline">User</Badge>;
     }
-  };
+  }, []);
 
-  const columns = [
+  // Memoize columns for better performance
+  const columns = useMemo(() => {
+    const baseColumns = [
     columnHelper.display({
       id: 'avatar',
       header: '',
@@ -209,9 +212,9 @@ export function UsersList({
     }),
   ];
 
-  // Add actions column if edit button is enabled
-  if (showEditButton && onEdit) {
-    columns.push(
+    // Add actions column if edit button is enabled
+    if (showEditButton && onEdit) {
+      baseColumns.push(
       columnHelper.display({
         id: 'actions',
         header: '操作',
@@ -229,7 +232,10 @@ export function UsersList({
         enableSorting: false,
       })
     );
-  }
+    }
+
+    return baseColumns;
+  }, [showEditButton, onEdit, editButtonText, getRoleIcon, getRoleBadge]);
 
   const table = useReactTable({
     data: users,

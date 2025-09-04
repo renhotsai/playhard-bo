@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +44,7 @@ export default function UserRoleManagementPage() {
 
   // Fetch users with their roles and organizations
   const { data: users = [], isLoading } = useQuery({
-    queryKey: ['users', searchTerm, roleFilter],
+    queryKey: queryKeys.users.list({ search: searchTerm, role: roleFilter }),
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.set('search', searchTerm);
@@ -75,7 +76,7 @@ export default function UserRoleManagementPage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
       toast.success('用戶角色已成功更新');
       setShowRoleDialog(false);
       setSelectedUser(null);

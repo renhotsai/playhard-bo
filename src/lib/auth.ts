@@ -26,6 +26,12 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false, // Disable for admin-created accounts
+    
+    // Custom password reset email handler
+    sendResetPassword: async (data) => {
+      const { sendPasswordResetEmail } = await import("./email");
+      await sendPasswordResetEmail(data.user.email, data.url);
+    },
   },
   
   // Session configuration

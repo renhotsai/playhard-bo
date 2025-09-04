@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { OrganizationListItem } from "@/lib/types";
 import { 
   Loader2, 
   Building2,
@@ -38,25 +39,7 @@ import {
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  createdAt: string;
-  memberCount: number;
-  pendingInvitationsCount?: number;
-  members: Array<{
-    id: string;
-    role: string;
-    user: {
-      id: string;
-      name: string;
-      email: string;
-    };
-  }>;
-}
-
-const columnHelper = createColumnHelper<Organization>();
+const columnHelper = createColumnHelper<OrganizationListItem>();
 
 export function MerchantsList() {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -117,7 +100,7 @@ export function MerchantsList() {
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('zh-TW'),
+      cell: ({ row }) => row.original.createdAt.toLocaleDateString('zh-TW'),
     }),
     columnHelper.display({
       id: 'actions',
@@ -133,12 +116,15 @@ export function MerchantsList() {
     }),
   ];
 
-  // Transform Better Auth organizations to expected format
-  const transformedOrganizations: Organization[] = (organizations || []).map(org => ({
-    ...org,
-    createdAt: org.createdAt.toISOString(),
+  // Transform Better Auth organizations to list item format
+  const transformedOrganizations: OrganizationListItem[] = (organizations || []).map(org => ({
+    id: org.id,
+    name: org.name,
+    slug: org.slug,
+    logo: org.logo,
+    createdAt: org.createdAt,
     memberCount: 0, // Will be populated by API if needed
-    members: [] // Will be populated by API if needed
+    pendingInvitationsCount: 0 // Will be populated by API if needed
   }));
 
   const table = useReactTable({

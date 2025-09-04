@@ -1,15 +1,22 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { generateRandomString } from "better-auth/crypto";
 
 export async function GET () {
 	try {
-		// 使用正確的 Better Auth admin API 創建用戶
-		// 參考: https://www.better-auth.com/docs/plugins/admin#create-user
+		// Step 1: Create user with temporary random password
+		// This is the Better Auth compliant workaround for passwordless user creation
+		// The random password is never stored or shown anywhere
+		const temporaryPassword = generateRandomString(32); // Use Better Auth's crypto utility
+		
+		const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || "admin@playhard.local";
+		const adminName = process.env.DEFAULT_ADMIN_NAME || "Admin";
+		
 		const newUser = await auth.api.createUser({
 			body: {
-				email: "admin@playhard.local", // required
-				password: "admin123", // required
-				name: "Admin", // required
+				email: adminEmail,
+				name: adminName,
+				password: temporaryPassword, // temporary random password (never exposed)
 				role: "admin",
 				data: {
 					username: "admin",
@@ -18,9 +25,26 @@ export async function GET () {
 			},
 		});
 
+		// Step 2: Immediately trigger password reset for first-time setup
+		// This invalidates the temporary password and sends setup email
+		const resetResult = await auth.api.forgetPassword({
+			body: {
+				email: adminEmail,
+			},
+		});
+
+		if (!resetResult.status) {
+			console.error("Failed to send password reset email");
+			return NextResponse.json({
+				error: "User created but failed to send setup email"
+			}, { status: 207 }); // Partial success
+		}
+
 		return NextResponse.json({
-			message: "Admin user created successfully using Better Auth",
-			user: newUser.user
+			message: "Admin user created successfully. Password setup email sent.",
+			user: newUser.user,
+			setupRequired: true,
+			note: "User must set password via email link before first login"
 		});
 	} catch (error) {
 		console.error("Create admin error:", error);
