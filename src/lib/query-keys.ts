@@ -27,6 +27,8 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.organizations.details(), id] as const,
     members: (orgId: string) => 
       [...queryKeys.organizations.detail(orgId), 'members'] as const,
+    stores: (orgId: string) => 
+      [...queryKeys.organizations.detail(orgId), 'stores'] as const,
   },
 
   // Teams
@@ -66,5 +68,12 @@ export const queryKeyUtils = {
   invalidateOrganizationAndMembers: (orgId: string) => [
     queryKeys.organizations.detail(orgId),
     queryKeys.organizations.members(orgId),
+  ],
+  
+  // Invalidate organization, members, and stores
+  invalidateOrganizationComplete: (orgId: string) => [
+    queryKeys.organizations.detail(orgId),
+    queryKeys.organizations.members(orgId),
+    queryKeys.organizations.stores(orgId),
   ],
 } as const;

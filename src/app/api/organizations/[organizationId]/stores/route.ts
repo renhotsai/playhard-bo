@@ -1,51 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/generated/prisma';
-import { auth } from '@/lib/auth';
-import { isSystemAdmin } from '@/lib/permissions';
+import { withOrganizationAccess } from '@/lib/api-auth';
 
 const prisma = new PrismaClient();
 
-export async function GET(
-  request: NextRequest,
+export const GET = withOrganizationAccess(async (
+  request: NextRequest, 
+  _session,
   { params }: { params: Promise<{ organizationId: string }> }
-) {
-  try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+) => {
     const { organizationId } = await params;
-    const hasSystemAdminAccess = isSystemAdmin(session.user?.role);
-
-    // Check if user has access to this organization
-    if (!hasSystemAdminAccess) {
-      // For non-system admins, check if they have access to this organization
-      // Better Auth stores the active organization in the session
-      const hasAccess = session?.session?.activeOrganizationId === organizationId;
-      
-      if (!hasAccess) {
-        // If not in session, try to get organization details to verify membership
-        try {
-          const orgDetails = await auth.api.getFullOrganization({
-            headers: request.headers,
-            query: {
-              organizationId: organizationId
-            }
-          });
-          
-          // If we can get org details without error, user has access
-          if (!orgDetails) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-          }
-        } catch {
-          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-      }
-    }
 
     // Fetch stores for the organization
     const stores = await prisma.store.findMany({
@@ -58,11 +22,56 @@ export async function GET(
     });
 
     return NextResponse.json({ stores });
-  } catch (error) {
-    console.error('Error fetching organization stores:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+});
+
+export const POST = withOrganizationAccess(async (
+  request: NextRequest,
+  _session, 
+  { params }: { params: Promise<{ organizationId: string }> }
+) => {
+    const { organizationId } = await params;
+
+    // Get request body
+    const body = await request.json();
+    const {
+      name,
+      address,
+      city,
+      state,
+      zipCode,
+      country,
+      phone,
+      email,
+      isActive
+    } = body;
+
+    // Basic validation
+    if (!name?.trim()) {
+      return NextResponse.json({ error: 'Store name is required' }, { status: 400 });
+    }
+
+    if (!address?.trim()) {
+      return NextResponse.json({ error: 'Store address is required' }, { status: 400 });
+    }
+
+    // Create new store
+    const newStore = await prisma.store.create({
+      data: {
+        name: name.trim(),
+        address: address.trim(),
+        city: city?.trim() || null,
+        state: state?.trim() || null,
+        zipCode: zipCode?.trim() || null,
+        country: country || 'TW',
+        phone: phone?.trim() || null,
+        email: email?.trim() || null,
+        isActive: Boolean(isActive),
+        organizationId: organizationId,
+      },
+    });
+
+    return NextResponse.json({
+      message: 'Store created successfully',
+      store: newStore,
+    }, { status: 201 });
+});
