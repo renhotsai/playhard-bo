@@ -39,7 +39,9 @@ export function CreateOrgUserForm({ onSuccess, defaultOrganizationId }: CreateOr
   const { data: organizationsData, isLoading: isLoadingOrgs } = useQuery({
     queryKey: ['organizations'],
     queryFn: async () => {
-      const response = await fetch('/api/organizations/list');
+      const response = await fetch('/api/organizations', {
+        credentials: 'include'
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch organizations');
       }

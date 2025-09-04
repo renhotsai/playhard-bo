@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ export default function OrganizationMembersPage() {
   const [organization, setOrganization] = useState<OrganizationDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchOrganizationDetails = async () => {
+  const fetchOrganizationDetails = useCallback(async () => {
     try {
       const response = await fetch('/api/organizations');
       if (response.ok) {
@@ -63,13 +63,13 @@ export default function OrganizationMembersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [organizationId]);
 
   useEffect(() => {
     if (organizationId) {
       fetchOrganizationDetails();
     }
-  }, [organizationId]);
+  }, [organizationId, fetchOrganizationDetails]);
 
   const getRoleLabel = (role: string) => {
     switch (role) {

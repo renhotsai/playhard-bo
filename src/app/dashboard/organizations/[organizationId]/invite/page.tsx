@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { authClient } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth-client";
 
 interface OrganizationInfo {
   id: string;
@@ -19,7 +19,7 @@ interface OrganizationInfo {
 export default function InviteUserPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { data: session } = useSession();
   const organizationId = params.organizationId as string;
   const [organizationInfo, setOrganizationInfo] = useState<OrganizationInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,7 +32,7 @@ export default function InviteUserPage() {
           const data = await response.json();
           const org = data.organizations.find((o: { id: string; name: string; members: Array<{ user: { id: string }; role: string }> }) => o.id === organizationId);
           if (org) {
-            const userMembership = org.members.find((member: { user: { id: string }; role: string }) => member.user.id === user?.id);
+            const userMembership = org.members.find((member: { user: { id: string }; role: string }) => member.user.id === session?.user?.id);
             setOrganizationInfo({
               id: org.id,
               name: org.name,
@@ -52,16 +52,11 @@ export default function InviteUserPage() {
       }
     };
 
-    if (organizationId && user) {
+    if (organizationId && session?.user) {
       fetchOrganizationInfo();
     }
-  }, [organizationId, user, router]);
+  }, [organizationId, session?.user?.id, session?.user, router]);
 
-  const handleSuccess = () => {
-    router.push(`/dashboard/organization/${organizationId}/members`);
-  };
-
-  const canAssignAdminRole = user?.role === 'admin' || organizationInfo?.userRole === 'admin';
 
   if (isLoading) {
     return (

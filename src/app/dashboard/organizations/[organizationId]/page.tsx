@@ -5,25 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ArrowLeft, Building2, Edit, Loader2, MapPin, Store } from "lucide-react";
+import { AlertCircle, ArrowLeft, Building2, Edit, Loader2, MapPin, Store as StoreIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { isSystemAdmin } from "@/lib/permissions";
 import { useEffect } from "react";
-
-interface Store {
-  id: string;
-  name: string;
-  address: string;
-  city?: string;
-  zipCode?: string;
-  phone?: string;
-  email?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { Store } from "@/generated/prisma";
 
 // Remove mock stores data - now using real data from database
 
@@ -161,7 +149,7 @@ export default function OrganizationDetailPage() {
             <div>
               <div className="text-sm font-medium text-muted-foreground">門店數量</div>
               <div className="flex items-center gap-2">
-                <Store className="h-4 w-4" />
+                <StoreIcon className="h-4 w-4" />
                 <span>{storesData?.stores?.length || 0} 家門店</span>
               </div>
             </div>
@@ -175,7 +163,7 @@ export default function OrganizationDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Store className="h-5 w-5" />
+                <StoreIcon className="h-5 w-5" />
                 門店列表
               </CardTitle>
               <CardDescription>
@@ -184,7 +172,7 @@ export default function OrganizationDetailPage() {
             </div>
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/organizations/${organizationId}/stores/create`}>
-                <Store className="h-4 w-4 mr-2" />
+                <StoreIcon className="h-4 w-4 mr-2" />
                 添加門店
               </Link>
             </Button>
@@ -211,7 +199,7 @@ export default function OrganizationDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {storesData.stores.map((store) => (
+                  {storesData.stores.map((store: Store) => (
                     <TableRow key={store.id}>
                       <TableCell className="font-medium">{store.name}</TableCell>
                       <TableCell>
@@ -253,7 +241,7 @@ export default function OrganizationDetailPage() {
                         {new Date(store.createdAt).toLocaleDateString('zh-TW')}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {new Date(store.updatedAt).toLocaleDateString('zh-TW')}
+                        {store.updatedAt ? new Date(store.updatedAt).toLocaleDateString('zh-TW') : '-'}
                       </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" asChild>
@@ -270,14 +258,14 @@ export default function OrganizationDetailPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <StoreIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">尚無門店</h3>
               <p className="text-muted-foreground mb-4">
                 此商戶尚未添加任何門店資訊
               </p>
               <Button variant="outline" asChild>
                 <Link href={`/dashboard/organizations/${organizationId}/stores/create`}>
-                  <Store className="h-4 w-4 mr-2" />
+                  <StoreIcon className="h-4 w-4 mr-2" />
                   添加門店
                 </Link>
               </Button>

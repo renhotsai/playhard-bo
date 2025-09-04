@@ -90,7 +90,6 @@ const getMenuData = (isSystemAdmin: boolean, activeOrganizationId?: string) => {
 export function AppSidebar () {
 	const {
 		data: session,
-		isPending, //loading state
 	} = authClient.useSession()
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 	const [avatarFallback, setAvatarFallback] = useState("AF")

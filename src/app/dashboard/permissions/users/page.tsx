@@ -8,9 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { SystemPermissionGuard } from "@/components/system-permission-guard";
 import { authClient } from "@/lib/auth-client";
 import { Users, UserCog, Search, Filter, Plus, Edit3, Shield, Crown, User as UserIcon } from "lucide-react";
 import Link from "next/link";
@@ -87,30 +86,6 @@ export default function UserRoleManagementPage() {
     },
   });
 
-  // Ban/Unban user mutation
-  const toggleUserBan = useMutation({
-    mutationFn: async ({ userId, banned, reason }: { userId: string; banned: boolean; reason?: string }) => {
-      const response = await fetch(`/api/admin/users/${userId}/ban`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ banned, reason }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update user ban status');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('用戶狀態已更新');
-    },
-    onError: (error: Error) => {
-      toast.error(`操作失敗: ${error.message}`);
-    },
-  });
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = !searchTerm || 

@@ -21,7 +21,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { email, role = 'member', name } = body;
+    const { email, role = 'member' } = body;
 
     if (!email) {
       return NextResponse.json({ 

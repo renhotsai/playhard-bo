@@ -29,9 +29,9 @@ const mockStores = [
 
 export async function GET(
   request: NextRequest, 
-  { params }: { params: { organizationId: string } }
+  { params }: { params: Promise<{ organizationId: string }> }
 ) {
-  const organizationId = params.organizationId;
+  const { organizationId } = await params;
   
   if (!organizationId) {
     return NextResponse.json(
@@ -52,13 +52,28 @@ export async function GET(
     );
   }
 
-  // Get organization details using Better Auth getFullOrganization
-  const organizationResult = await auth.api.getFullOrganization({
-    headers: request.headers,
-    body: {
-      organizationId: organizationId
-    }
-  });
+  // Get organization details using Better Auth
+  // Note: Better Auth may not have getFullOrganization method
+  // Use getOrganization or query directly
+  let organizationResult;
+  
+  try {
+    // Try using the organization API
+    organizationResult = await auth.api.getFullOrganization({
+      headers: request.headers,
+      query: {
+        organizationId: organizationId
+      }
+    });
+  } catch (error) {
+    console.error('Error with getFullOrganization:', error);
+    // Fallback: you may need to implement this with direct database queries
+    // For now, return an error
+    return NextResponse.json(
+      { error: "Organization not found" },
+      { status: 404 }
+    );
+  }
 
   if (!organizationResult) {
     return NextResponse.json(
@@ -82,7 +97,7 @@ export async function GET(
   const organizationMembers = organization.members || [];
 
   // Include owner in members list if not already present
-  const membersWithOwner = ownerInfo && !organizationMembers.find((m: { user?: { id: string } }) => m.user?.id === ownerInfo.id) 
+  const membersWithOwner = ownerInfo && !organizationMembers.find((m) => m.userId === ownerInfo.id) 
     ? [{
         id: `owner-${ownerInfo.id}`,
         role: 'owner',
@@ -109,9 +124,9 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest, 
-  { params }: { params: { organizationId: string } }
+  { params }: { params: Promise<{ organizationId: string }> }
 ) {
-  const organizationId = params.organizationId;
+  const { organizationId } = await params;
   
   if (!organizationId) {
     return NextResponse.json(

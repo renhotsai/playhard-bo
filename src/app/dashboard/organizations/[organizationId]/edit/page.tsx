@@ -57,11 +57,24 @@ export default function EditOrganizationPage() {
         setIsLoading(true);
         setError(null);
         const result = await authClient.organization.getFullOrganization({
-          organizationId
+          query: { organizationId }
         });
         
         if (result.data) {
-          setOrganization(result.data as OrganizationDetail);
+          // Transform Date objects to strings to match OrganizationDetail interface
+          const transformedData = {
+            ...result.data,
+            createdAt: result.data.createdAt.toISOString(),
+            members: result.data.members?.map(member => ({
+              ...member,
+              createdAt: member.createdAt.toISOString()
+            })) || [],
+            invitations: result.data.invitations?.map(invitation => ({
+              ...invitation,
+              expiresAt: invitation.expiresAt?.toISOString()
+            })) || []
+          };
+          setOrganization(transformedData as OrganizationDetail);
         } else {
           throw new Error('組織未找到');
         }
@@ -222,7 +235,7 @@ export default function EditOrganizationPage() {
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="請輸入商戶名稱"
-                      disabled={updateMutation.isPending}
+                      disabled={isUpdating}
                     />
                     {field.state.meta.errors.length > 0 && (
                       <p className="text-sm text-destructive">

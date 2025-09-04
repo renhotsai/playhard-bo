@@ -38,7 +38,9 @@ export function CreateMerchantForm({ onSuccess }: CreateMerchantFormProps) {
     const fetchOwnerUsers = async () => {
       try {
         setIsLoadingOwners(true);
-        const result = await authClient.admin.listUsers();
+        const result = await authClient.admin.listUsers({ 
+          query: { limit: 100 } 
+        });
         if (result.data) {
           const owners = result.data.users.filter((user: { role?: string }) => user.role === 'owner');
           setOwnerUsers(owners);

@@ -7,21 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { authClient, useSession } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 
-interface SetUsernameFormData {
-  username: string;
-  password: string;
-  confirmPassword: string;
-}
 
 export function SetUsernameForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingInvitation, setPendingInvitation] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = authClient.useSession()
 
   // 檢查 URL 中是否有邀請 ID
   useEffect(() => {

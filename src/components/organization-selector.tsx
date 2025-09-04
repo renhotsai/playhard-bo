@@ -16,8 +16,7 @@ interface OrganizationSelectorProps {
 }
 
 export function OrganizationSelector({ className }: OrganizationSelectorProps) {
-  const { data: session } = authClient.useSession();
-  const { data: organizations, isLoading, error } = authClient.useListOrganizations();
+  const { data: organizations, isPending, error } = authClient.useListOrganizations();
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
 
   // Handle organization selection
@@ -43,7 +42,7 @@ export function OrganizationSelector({ className }: OrganizationSelectorProps) {
 
   // Automatically set the first organization as active if none is selected
   useEffect(() => {
-    if (organizations && organizations.length > 0 && !session?.activeOrganizationId && !selectedOrgId) {
+    if (organizations && organizations.length > 0 && !selectedOrgId) {
       const firstOrgId = organizations[0].id;
       setSelectedOrgId(firstOrgId);
       
@@ -58,13 +57,13 @@ export function OrganizationSelector({ className }: OrganizationSelectorProps) {
         console.error("Failed to auto-set first organization:", err);
       });
     }
-  }, [organizations, session?.activeOrganizationId, selectedOrgId]);
+  }, [organizations, selectedOrgId]);
 
-  // Get the currently active organization from session or default to first org
-  const activeOrgId = session?.activeOrganizationId || (organizations && organizations.length > 0 ? organizations[0].id : "");
+  // Get the currently active organization from selectedOrgId or default to first org
+  const activeOrgId = selectedOrgId || (organizations && organizations.length > 0 ? organizations[0].id : "");
   const selectedOrg = organizations?.find(org => org.id === (selectedOrgId || activeOrgId));
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className={`flex items-center gap-2 p-2 ${className}`}>
         <Building2 className="h-4 w-4 text-muted-foreground" />

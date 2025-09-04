@@ -1,9 +1,16 @@
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements, adminAc } from "better-auth/plugins/admin/access";
 
-// 創建基本的 Better Auth 配置
+// 創建基本的 Better Auth 配置，包含admin插件所需的声明
 export const statement = {
   ...defaultStatements,
+  // Admin插件所需的权限声明
+  user: ["create", "read", "update", "delete", "list", "ban", "unban", "impersonate"],
+  session: ["create", "read", "update", "delete", "list", "revoke"],
+  organization: ["create", "read", "update", "delete", "list"],
+  // Organization plugin permissions
+  "organization:member": ["create", "read", "update", "delete", "list"],
+  "organization:invitation": ["create", "read", "update", "delete", "list"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -11,8 +18,10 @@ export const ac = createAccessControl(statement);
 // Better Auth 角色定義
 export const admin = ac.newRole({
   ...adminAc.statements,
+  // 显式添加所有admin权限，确保与statement一致
+  user: ["create", "read", "update", "delete", "list", "ban", "unban", "impersonate"],
+  session: ["create", "read", "update", "delete", "list", "revoke"],
   organization: ["create", "read", "update", "delete", "list"],
-  user: ["create", "read", "update", "delete", "list", "ban", "unban"],
 });
 
 export const owner = ac.newRole({

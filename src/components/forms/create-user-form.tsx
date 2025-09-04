@@ -54,7 +54,9 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
   const { data: organizationsData, isLoading: isLoadingOrgs } = useQuery({
     queryKey: queryKeys.organizations.list(),
     queryFn: async () => {
-      const response = await fetch('/api/organizations/list');
+      const response = await fetch('/api/organizations', {
+        credentials: 'include'
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch organizations');
       }
@@ -290,7 +292,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
                   <Label htmlFor="userType">系統用戶類型 *</Label>
                   <Select
                     value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value)}
+                    onValueChange={(value) => field.handleChange(value as 'admin' | 'owner' | 'supervisor' | 'employee')}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="選擇系統用戶類型" />
@@ -331,7 +333,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
                   <Label htmlFor="userType">組織用戶類型 *</Label>
                   <Select
                     value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value)}
+                    onValueChange={(value) => field.handleChange(value as 'admin' | 'owner' | 'supervisor' | 'employee')}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="選擇組織用戶類型" />
@@ -537,7 +539,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
                   ) : (
                     <Select
                       value={field.state.value}
-                      onValueChange={(value) => field.handleChange(value)}
+                      onValueChange={(value) => field.handleChange(value as string)}
                       disabled={isLoadingOrgs || organizationsData?.organizations?.length === 0}
                     >
                       <SelectTrigger>

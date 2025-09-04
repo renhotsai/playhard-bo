@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
-import { signIn, signUp } from "@/lib/auth-client";
+import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +49,7 @@ export function LoginDialog({ children }: LoginDialogProps) {
         } else {
           setOpen(false);
         }
-      } catch (err) {
+      } catch {
         setError("An unexpected error occurred");
       } finally {
         setLoading(false);
@@ -81,7 +81,7 @@ export function LoginDialog({ children }: LoginDialogProps) {
         toast.success("Sign up - API implementation needed");
         setActiveTab("signin");
         setError("");
-      } catch (err) {
+      } catch {
         setError("An unexpected error occurred");
       } finally {
         setLoading(false);

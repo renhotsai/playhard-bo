@@ -9,6 +9,30 @@ import { authClient } from "@/lib/auth-client";
 import { Shield, Crown, Users, UserCheck, Eye, Plus, Info } from "lucide-react";
 // Remove non-existent imports - we'll define locally or remove functionality
 
+// Role display names mapping
+const ROLE_DISPLAY_NAMES: { [key: string]: string } = {
+  admin: '系統管理員',
+  owner: '組織擁有者',
+  supervisor: '組織主管',  
+  employee: '組織員工'
+};
+
+// Function to get roles that can be created by a given role
+const getCreatableRoles = (currentRole: string): string[] => {
+  switch (currentRole) {
+    case 'admin':
+      return ['admin', 'owner', 'supervisor', 'employee'];
+    case 'owner':
+      return ['supervisor', 'employee'];
+    case 'supervisor':
+      return ['employee'];
+    case 'employee':
+      return [];
+    default:
+      return [];
+  }
+};
+
 // 角色定義
 const ALL_ROLES = [
   {

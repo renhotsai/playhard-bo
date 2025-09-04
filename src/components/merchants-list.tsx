@@ -65,7 +65,7 @@ export function MerchantsList() {
 
   const { 
     data: organizations = [], 
-    isLoading, 
+    isPending, 
     error, 
     refetch,
     isRefetching 
@@ -133,8 +133,16 @@ export function MerchantsList() {
     }),
   ];
 
+  // Transform Better Auth organizations to expected format
+  const transformedOrganizations: Organization[] = (organizations || []).map(org => ({
+    ...org,
+    createdAt: org.createdAt.toISOString(),
+    memberCount: 0, // Will be populated by API if needed
+    members: [] // Will be populated by API if needed
+  }));
+
   const table = useReactTable({
-    data: organizations,
+    data: transformedOrganizations,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -150,7 +158,7 @@ export function MerchantsList() {
     },
   });
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -183,7 +191,7 @@ export function MerchantsList() {
     );
   }
 
-  if (organizations.length === 0) {
+  if (!organizations || organizations.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />

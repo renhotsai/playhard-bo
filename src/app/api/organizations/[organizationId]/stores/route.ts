@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/generated/prisma';
+import { PrismaClient } from '@/generated/prisma';
 import { auth } from '@/lib/auth';
 import { isSystemAdmin } from '@/lib/permissions';
 
+const prisma = new PrismaClient();
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { organizationId: string } }
+  { params }: { params: Promise<{ organizationId: string }> }
 ) {
   try {
     const session = await auth.api.getSession({
@@ -16,18 +18,32 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { organizationId } = params;
+    const { organizationId } = await params;
     const hasSystemAdminAccess = isSystemAdmin(session.user?.role);
 
     // Check if user has access to this organization
     if (!hasSystemAdminAccess) {
-      const userOrganizations = await auth.api.listUserOrganizations({
-        headers: request.headers,
-      });
+      // For non-system admins, check if they have access to this organization
+      // Better Auth stores the active organization in the session
+      const hasAccess = session?.session?.activeOrganizationId === organizationId;
       
-      const hasAccess = userOrganizations?.some(org => org.id === organizationId);
       if (!hasAccess) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        // If not in session, try to get organization details to verify membership
+        try {
+          const orgDetails = await auth.api.getFullOrganization({
+            headers: request.headers,
+            query: {
+              organizationId: organizationId
+            }
+          });
+          
+          // If we can get org details without error, user has access
+          if (!orgDetails) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+          }
+        } catch {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
       }
     }
 

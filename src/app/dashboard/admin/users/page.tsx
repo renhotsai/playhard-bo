@@ -10,8 +10,9 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import { queryKeys } from "@/lib/query-keys";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { isSystemAdmin } from "@/lib/permissions";
+import { useSessionQueryDebug } from "@/hooks/use-debug-query";
 
 interface User {
 	id: string;
@@ -38,23 +39,104 @@ export default function AdminUsersPage() {
 		isPending:isSessionLoading, //loading state
 	} = authClient.useSession()
 
+	// Debug session state for troubleshooting
+	useSessionQueryDebug(session, isSessionLoading, true, 'AdminUsersPage');
+
+	// Memoize session validation for stable query condition
+	const isValidAdminSession = useMemo(() => {
+		if (isSessionLoading || !session) {
+			console.log('[AdminUsersPage] Session not ready:', { isSessionLoading, hasSession: !!session });
+			return false;
+		}
+		
+		const isAdmin = isSystemAdmin(session.user?.role);
+		console.log('[AdminUsersPage] Session validation:', {
+			userId: session.user?.id,
+			userRole: session.user?.role,
+			isAdmin,
+			sessionValid: !!session.user
+		});
+		
+		return !!session.user && isAdmin;
+	}, [isSessionLoading, session]);
+
 	// Always call hooks first - Fetch all users (admin only)
-	const { data: usersData, isLoading, error } = useQuery({
+	const { data: usersData, isLoading, error, refetch } = useQuery({
 		queryKey: queryKeys.admin.allUsers(),
 		queryFn: async () => {
-			const response = await fetch('/api/admin/users');
+			console.log('[AdminUsersPage] Starting API call to /api/admin/users');
+			
+			const response = await fetch('/api/admin/users', {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				credentials: 'include', // Include cookies for Better Auth session
+			});
+			
+			console.log('[AdminUsersPage] API response status:', response.status);
+			
 			if (!response.ok) {
-				throw new Error('Failed to fetch users');
+				let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+				
+				try {
+					const errorData = await response.json();
+					errorMessage = errorData.error || errorMessage;
+					console.error('[AdminUsersPage] API error details:', errorData);
+				} catch {
+					// If JSON parsing fails, use default error message
+					console.error('[AdminUsersPage] Failed to parse error response');
+				}
+				
+				// Throw specific error based on status code
+				if (response.status === 401) {
+					throw new Error('Authentication required - please log in again');
+				} else if (response.status === 403) {
+					throw new Error('System admin privileges required');
+				} else {
+					throw new Error(errorMessage);
+				}
 			}
-			return response.json();
+			
+			const data = await response.json();
+			console.log('[AdminUsersPage] API success:', {
+				userCount: data.users?.length,
+				total: data.total
+			});
+			
+			return data;
 		},
-		enabled: !isSessionLoading && !!session && isSystemAdmin(session.user?.role), // Only fetch if admin
+		enabled: isValidAdminSession, // Use memoized validation
+		staleTime: 5 * 60 * 1000, // 5 minutes
+		gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime in v5)
+		retry: (failureCount, error) => {
+			// Don't retry authentication or authorization errors
+			if (error instanceof Error) {
+				if (error.message.includes('Authentication required') || 
+					error.message.includes('privileges required')) {
+					return false;
+				}
+			}
+			// Retry network errors up to 3 times
+			return failureCount < 3;
+		},
+		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});
 
-	// Redirect non-admin users
+	// Redirect non-admin users with proper logging
 	useEffect(() => {
-		if (!isSessionLoading && session && !isSystemAdmin(session.user?.role)) {
-			router.push('/dashboard');
+		if (!isSessionLoading && session) {
+			const isAdmin = isSystemAdmin(session.user?.role);
+			console.log('[AdminUsersPage] Access control check:', {
+				isAdmin,
+				userRole: session.user?.role,
+				userId: session.user?.id
+			});
+			
+			if (!isAdmin) {
+				console.log('[AdminUsersPage] Redirecting non-admin user to dashboard');
+				router.push('/dashboard');
+			}
 		}
 	}, [session, isSessionLoading, router]);
 
@@ -67,8 +149,9 @@ export default function AdminUsersPage() {
 		);
 	}
 
-	// Don't render if not system admin
-	if (!session || !isSystemAdmin(session.user?.role)) {
+	// Don't render if not system admin (with logging)
+	if (!isSessionLoading && (!session || !isSystemAdmin(session.user?.role))) {
+		console.log('[AdminUsersPage] Rendering blocked - insufficient permissions');
 		return null;
 	}
 
@@ -127,10 +210,37 @@ export default function AdminUsersPage() {
 							<p className="mt-2 text-muted-foreground">Loading users...</p>
 						</div>
 					) : error ? (
-						<div className="text-center py-8 text-red-500">
-							<Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-							<p>Failed to load users</p>
-							<p className="text-sm">{error instanceof Error ? error.message : 'Unknown error'}</p>
+						<div className="text-center py-8">
+							<Shield className="h-12 w-12 mx-auto mb-4 opacity-50 text-red-500" />
+							<p className="text-red-600 font-medium mb-2">Failed to load users</p>
+							<p className="text-sm text-red-500 mb-4">
+								{error.message || 'Unknown error occurred'}
+							</p>
+							<div className="flex gap-2 justify-center">
+								<Button 
+									variant="outline" 
+									size="sm"
+									onClick={() => {
+										console.log('[AdminUsersPage] Manual refetch triggered');
+										refetch();
+									}}
+								>
+									Retry
+								</Button>
+								{(error.message.includes('Authentication') || 
+								  error.message.includes('privileges')) && (
+									<Button 
+										variant="default" 
+										size="sm"
+										onClick={() => {
+											console.log('[AdminUsersPage] Redirecting to login');
+											window.location.href = '/login';
+										}}
+									>
+										Go to Login
+									</Button>
+								)}
+							</div>
 						</div>
 					) : usersData?.users?.length > 0 ? (
 						<div className="rounded-md border">

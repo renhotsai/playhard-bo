@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 使用 Better Auth admin API 創建系統用戶
-      const newUser = await auth.api.createUser({
+      const newUserResult = await auth.api.createUser({
         body: {
           email,
           name,
@@ -39,11 +39,14 @@ export async function POST(request: NextRequest) {
           }
         }
       });
+      
+      // Better Auth createUser may return user directly or in a wrapper
+      const newUser = newUserResult?.user || newUserResult;
 
       return NextResponse.json({
         success: true,
         message: `系統${role === 'admin' ? '管理員' : '用戶'}建立成功`,
-        user: newUser.user
+        user: newUser
       });
 
     } else if (type === 'organization') {
@@ -83,6 +86,11 @@ export async function POST(request: NextRequest) {
         invitation: invitation
       });
     }
+
+    // If we reach here, it means invalid type was provided
+    return NextResponse.json({
+      error: "無效的創建類型"
+    }, { status: 400 });
 
   } catch (error) {
     console.error("Create user/invitation error:", error);

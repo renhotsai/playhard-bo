@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Building2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function CreateUserPage(){
+function CreateUserContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const organizationId = searchParams.get('organizationId');
@@ -47,5 +48,13 @@ export default function CreateUserPage(){
 				</CardContent>
 			</Card>
 		</div>
+	);
+}
+
+export default function CreateUserPage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<CreateUserContent />
+		</Suspense>
 	);
 }

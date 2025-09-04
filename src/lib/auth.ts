@@ -20,7 +20,7 @@ export const auth = betterAuth({
   
   // Basic configuration
   secret: process.env.BETTER_AUTH_SECRET!,
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   
   // Enable email and password authentication
   emailAndPassword: {
@@ -45,7 +45,9 @@ export const auth = betterAuth({
     // Admin plugin for SYSTEM-LEVEL administration with full permissions
     adminPlugin({
       ac,
-      roles: ["admin"], // Define which user roles have admin privileges
+      roles: {
+        admin, // Define which user roles have admin privileges
+      },
       // Optional: Add specific admin user IDs if needed
       // adminUserIds: ["specific-admin-user-id"],
     }),
@@ -94,11 +96,4 @@ export const auth = betterAuth({
     }),
   ],
   
-  // Advanced configuration
-  advanced: {
-    crossSubDomainCookies: {
-      enabled: false
-    },
-    useSecureCookies: process.env.NODE_ENV === "production",
-  },
 });

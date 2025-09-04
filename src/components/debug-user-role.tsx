@@ -4,9 +4,9 @@ import { useSession } from "@/lib/auth-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function DebugUserRole() {
-  const { data: session, isLoading } = useSession();
+  const { data: session, isPending } = useSession();
 
-  if (isLoading) {
+  if (isPending) {
     return <div>Loading session...</div>;
   }
 
@@ -25,9 +25,8 @@ export function DebugUserRole() {
           <p><strong>Name:</strong> {session.user.name || 'N/A'}</p>
           <p><strong>Role:</strong> {session.user.role || 'N/A'}</p>
           <p><strong>User ID:</strong> {session.user.id}</p>
-          {session.user.data && (
-            <p><strong>Custom Data:</strong> {JSON.stringify(session.user.data, null, 2)}</p>
-          )}
+          <p><strong>Email Verified:</strong> {session.user.emailVerified ? 'Yes' : 'No'}</p>
+          <p><strong>Created At:</strong> {new Date(session.user.createdAt).toLocaleString()}</p>
         </div>
       </CardContent>
     </Card>

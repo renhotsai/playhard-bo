@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface CreateUserFormData {
   name: string;
   email: string;
   password: string;
-  role: "admin" | "user";
-  username?: string;
+  role: "admin";
 }
 
 export default function AdminUserForm() {
@@ -21,11 +20,9 @@ export default function AdminUserForm() {
     name: "",
     email: "",
     password: "",
-    role: "user",
-    username: ""
+    role: "admin"
   });
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,23 +35,17 @@ export default function AdminUserForm() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: formData.role,
-        username: formData.username || undefined,
-        emailVerified: true // Admin-created users are auto-verified
+        role: formData.role
       });
 
-      toast({
-        title: "Success",
-        description: "User created successfully"
-      });
+      toast.success("User created successfully");
 
       // Reset form
       setFormData({
         name: "",
         email: "",
         password: "",
-        role: "user",
-        username: ""
+        role: "admin"
       });
 
       console.log("New user created:", newUser);
@@ -62,11 +53,7 @@ export default function AdminUserForm() {
     } catch (error) {
       console.error("Create user error:", error);
       
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create user",
-        variant: "destructive"
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to create user");
     } finally {
       setIsLoading(false);
     }
@@ -96,15 +83,6 @@ export default function AdminUserForm() {
         />
       </div>
 
-      <div>
-        <Label htmlFor="username">Username (Optional)</Label>
-        <Input
-          id="username"
-          type="text"
-          value={formData.username}
-          onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-        />
-      </div>
 
       <div>
         <Label htmlFor="password">Password</Label>
@@ -122,7 +100,7 @@ export default function AdminUserForm() {
         <Label htmlFor="role">Role</Label>
         <Select
           value={formData.role}
-          onValueChange={(value: "admin" | "user") => 
+          onValueChange={(value: "admin") => 
             setFormData(prev => ({ ...prev, role: value }))
           }
         >
@@ -130,7 +108,6 @@ export default function AdminUserForm() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="user">Regular User</SelectItem>
             <SelectItem value="admin">System Admin</SelectItem>
           </SelectContent>
         </Select>

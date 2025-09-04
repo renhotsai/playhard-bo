@@ -12,7 +12,6 @@ import {
 	type ColumnFiltersState,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,9 +23,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import {
-	Loader2,
 	Building2,
-	Users,
 	Search,
 	ChevronLeft,
 	ChevronRight,

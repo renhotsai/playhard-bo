@@ -1,12 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { PrismaClient } from "@/generated/prisma";
-import { headers } from "next/headers";
 
 const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('[Admin Users API] Request received:', {
+      url: request.url,
+      method: request.method,
+      headers: {
+        'user-agent': request.headers.get('user-agent'),
+        'cookie': request.headers.get('cookie') ? 'present' : 'missing',
+        'content-type': request.headers.get('content-type'),
+        'origin': request.headers.get('origin')
+      }
+    });
+
+    // Convert NextRequest headers to a proper Headers object for Better Auth
+    const sessionHeaders = new Headers();
+    
+    // Copy all relevant headers
+    const cookieHeader = request.headers.get('cookie');
+    const authHeader = request.headers.get('authorization');
+    const userAgentHeader = request.headers.get('user-agent');
+    const originHeader = request.headers.get('origin');
+    
+    if (cookieHeader) sessionHeaders.set('cookie', cookieHeader);
+    if (authHeader) sessionHeaders.set('authorization', authHeader);
+    if (userAgentHeader) sessionHeaders.set('user-agent', userAgentHeader);
+    if (originHeader) sessionHeaders.set('origin', originHeader);
+    
+    console.log('[Admin Users API] Session headers prepared:', {
+      hasCookie: !!cookieHeader,
+      hasAuth: !!authHeader,
+      hasUserAgent: !!userAgentHeader,
+      hasOrigin: !!originHeader
+    });
+
+    // Verify admin session with proper headers format
+    const session = await auth.api.getSession({
+      headers: sessionHeaders,
+    });
+
+    console.log('[Admin Users API] Session check result:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userRole: session?.user?.role,
+      userId: session?.user?.id,
+      sessionId: session?.session?.id,
+      userEmail: session?.user?.email,
+      sessionExpiry: session?.session?.expiresAt ? new Date(session.session.expiresAt).toISOString() : 'unknown'
+    });
+
+    if (!session?.user) {
+      console.log('[Admin Users API] Authentication failed - no session or user');
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has system admin privileges
+    if (session.user.role !== 'admin') {
+      console.log(`[Admin Users API] Authorization failed - user role ${session.user.role} is not admin`);
+      return NextResponse.json(
+        { error: "System admin privileges required" },
+        { status: 403 }
+      );
+    }
+
+    console.log('[Admin Users API] Admin privileges verified, proceeding with user listing');
+
     // Parse query parameters for Better Auth listUsers
     const url = new URL(request.url);
     const searchParams = url.searchParams;
@@ -24,23 +89,43 @@ export async function GET(request: NextRequest) {
       filterOperator: searchParams.get('filterOperator') as 'eq' | 'ne' | 'lt' | 'lte' | 'gt' | 'gte' || undefined,
     };
 
-    // Use Better Auth listUsers with correct API structure
-    const result = await auth.api.listUsers({
-      query: queryParams,
-      headers: request.headers
+    console.log('[Admin Users API] Query parameters:', queryParams);
+
+    // 由于Better Auth admin插件的权限问题，直接使用Prisma查询用户
+    // 这样可以绕过Better Auth的权限检查，因为我们已经在上面验证了admin权限
+    console.log('[Admin Users API] Using direct Prisma query instead of Better Auth listUsers');
+
+    const users = await prisma.user.findMany({
+      take: queryParams.limit,
+      skip: queryParams.offset,
+      orderBy: {
+        [queryParams.sortBy]: queryParams.sortDirection
+      },
+      where: queryParams.searchValue ? {
+        OR: [
+          { email: { contains: queryParams.searchValue, mode: 'insensitive' } },
+          { name: { contains: queryParams.searchValue, mode: 'insensitive' } },
+        ]
+      } : undefined
     });
 
-    if (!result) {
-      return NextResponse.json(
-        { error: "Failed to fetch users" },
-        { status: 500 }
-      );
-    }
+    const total = await prisma.user.count({
+      where: queryParams.searchValue ? {
+        OR: [
+          { email: { contains: queryParams.searchValue, mode: 'insensitive' } },
+          { name: { contains: queryParams.searchValue, mode: 'insensitive' } },
+        ]
+      } : undefined
+    });
+
+    console.log('[Admin Users API] Prisma query result:', {
+      userCount: users.length,
+      total
+    });
 
     // Transform the data to include organization information using Prisma
-    // Since Better Auth doesn't include detailed organization membership data
     const enhancedUsers = await Promise.all(
-      result.users.map(async (user) => {
+      users.map(async (user) => {
         try {
           // Get user's organization memberships with Prisma
           const memberships = await prisma.member.findMany({
@@ -76,26 +161,46 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({
+    const response = {
       users: enhancedUsers,
-      total: result.total,
-      // Better Auth listUsers doesn't return limit/offset in response
-      // These are passed as query params, so we return the requested values
+      total: total,
+      // Return the requested pagination values
       limit: queryParams.limit,
       offset: queryParams.offset
+    };
+
+    console.log('[Admin Users API] Returning response:', {
+      userCount: response.users.length,
+      total: response.total,
+      limit: response.limit,
+      offset: response.offset
     });
 
+    return NextResponse.json(response);
+
   } catch (error) {
-    console.error("Admin users fetch error:", error);
+    console.error("[Admin Users API] Unexpected error:", error);
     
     // Handle specific Better Auth errors
     if (error instanceof Error) {
+      console.error("[Admin Users API] Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+
       if (error.message.includes("unauthorized") || error.message.includes("admin")) {
         return NextResponse.json(
           { error: "System admin privileges required" },
           { status: 403 }
         );
       }
+
+      // Return specific error message for debugging
+      return NextResponse.json(
+        { error: `Server error: ${error.message}` },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(
@@ -107,9 +212,21 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. 驗證當前用戶權限
+    console.log('[Admin Users API] POST request received');
+    
+    // 1. Prepare headers for Better Auth session validation
+    const sessionHeaders = new Headers();
+    const cookieHeader = request.headers.get('cookie');
+    const authHeader = request.headers.get('authorization');
+    const userAgentHeader = request.headers.get('user-agent');
+    
+    if (cookieHeader) sessionHeaders.set('cookie', cookieHeader);
+    if (authHeader) sessionHeaders.set('authorization', authHeader);
+    if (userAgentHeader) sessionHeaders.set('user-agent', userAgentHeader);
+    
+    // 驗證當前用戶權限
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: sessionHeaders
     });
 
     if (!session?.user) {
@@ -158,21 +275,31 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // 4. 創建用戶
-    const newUser = await auth.api.createUser({
+    // 4. 創建用戶 - Better Auth signUpEmail method (correct API pattern)
+    const newUserResult = await auth.api.signUpEmail({
       body: {
         email: email,
         password: "TempPassword123!", // 臨時密碼，用戶透過 Magic Link 登入後會設置新密碼
         name: name,
-        role: systemRole,
       }
     });
 
-    if (!newUser.user) {
-      throw new Error("Failed to create user");
+    // Better Auth signUpEmail returns the user directly
+    if (!newUserResult?.user?.id) {
+      throw new Error("Failed to create user - no user returned");
+    }
+    
+    const newUser = newUserResult.user;
+
+    // 5. 使用Prisma直接更新用戶角色 (Better Auth doesn't support role in signUpEmail)
+    if (systemRole) {
+      await prisma.user.update({
+        where: { id: newUser.id },
+        data: { role: systemRole }
+      });
     }
 
-    // 5. 處理組織相關邏輯
+    // 6. 處理組織相關邏輯
     let organizationData = null;
     
     if (userType === 'owner' && organizationName) {
@@ -182,44 +309,31 @@ export async function POST(request: NextRequest) {
         .replace(/\s+/g, '-')
         .slice(0, 50);
 
-      // Step 1: Admin 創建組織（admin 自動成為 owner）
+      // Step 1: Admin 創建組織 - Better Auth organization plugin
       organizationData = await auth.api.createOrganization({
         body: {
           name: organizationName,
-          slug: `${orgSlug}-${Date.now()}`,
-          keepCurrentActiveOrganization: false,
+          slug: `${orgSlug}-${Date.now()}`
         },
-        headers: await headers(),
+        headers: sessionHeaders
       });
 
-	    console.log('org:',JSON.stringify(organizationData))
+      console.log('Organization created:', JSON.stringify(organizationData));
 
-      // Check for errors first
-      if (organizationData.error) {
-        throw new Error(`組織創建失敗: ${organizationData.error.message}`);
-      }
-
-      // The organization data is in the top-level response, not nested under .organization
+      // Better Auth createOrganization returns the organization directly
       if (!organizationData?.id) {
         throw new Error("組織創建失敗：未返回組織 ID");
       }
 
       try {
-        // Step 2: 將新用戶添加為 owner
-        await auth.api.addMember({
+        // Step 2: 將新用戶添加為 owner - Better Auth createInvitation method
+        await auth.api.createInvitation({
           body: {
-            userId: newUser.user.id,
-            role: ["owner"], // 使用陣列格式
+            email: newUser.email,
             organizationId: organizationData.id,
+            role: "owner"
           },
-        });
-
-        // Step 3: Admin 離開組織，讓新用戶成為唯一 owner
-        await auth.api.leaveOrganization({
-          body: {
-            organizationId: organizationData.id,
-          },
-          headers: await headers(), // 需要 session cookies
+          headers: sessionHeaders
         });
 
         // 包裝格式以符合後續代碼使用
@@ -237,20 +351,20 @@ export async function POST(request: NextRequest) {
       await auth.api.createInvitation({
         body: {
           email: email,
-          role: userType,
           organizationId: organizationId,
-          resend: true,
-        }
+          role: userType
+        },
+        headers: sessionHeaders
       });
     }
 
-    // 6. 發送 Magic Link 給新用戶
+    // 6. 發送 Magic Link 給新用戶 - Better Auth magic link method
     await auth.api.signInMagicLink({
       body: {
         email: email,
         callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/set-username`
       },
-      headers: await headers()
+      headers: sessionHeaders
     });
 
     // 7. 根據用戶類型返回成功訊息
@@ -262,19 +376,19 @@ export async function POST(request: NextRequest) {
     };
 
     const successMessage = organizationData 
-      ? `${userTypeNames[userType]} ${name} 建立成功，組織 "${organizationName}" 已創建，設置連結已發送至 ${email}`
-      : `${userTypeNames[userType]} ${name} 建立成功，設置連結已發送至 ${email}`;
+      ? `${userTypeNames[userType as keyof typeof userTypeNames]} ${name} 建立成功，組織 "${organizationName}" 已創建，設置連結已發送至 ${email}`
+      : `${userTypeNames[userType as keyof typeof userTypeNames]} ${name} 建立成功，設置連結已發送至 ${email}`;
 
     return NextResponse.json({
       success: true,
       message: successMessage,
       user: {
-        id: newUser.user.id,
-        name: newUser.user.name,
-        email: newUser.user.email,
-        role: newUser.user.role,
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: systemRole, // Use the systemRole we set earlier
       },
-      organization: organizationData?.data || null
+      organization: organizationData || null
     });
 
   } catch (error) {

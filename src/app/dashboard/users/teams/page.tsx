@@ -159,12 +159,20 @@ export default function UsersTeamsPage() {
     }
 
     try {
-      const userResponse = await fetch(`/api/users/email/${encodeURIComponent(newMemberEmail)}`);
+      // Search for user using admin API with email search
+      const userResponse = await fetch(`/api/admin/users?search=${encodeURIComponent(newMemberEmail)}&searchField=email`, {
+        credentials: 'include'
+      });
       if (!userResponse.ok) {
         throw new Error("User not found");
       }
       
-      const userData = await userResponse.json();
+      const usersData = await userResponse.json();
+      if (!usersData.users || usersData.users.length === 0) {
+        throw new Error("User not found");
+      }
+      
+      const userData = usersData.users[0]; // Get the first matching user
       
       const response = await fetch(`/api/teams/${selectedTeam.id}/members`, {
         method: "POST",

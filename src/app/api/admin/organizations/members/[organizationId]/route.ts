@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { organizationId: string } }
+  { params }: { params: Promise<{ organizationId: string }> }
 ) {
   try {
     // Get session from Better Auth
@@ -22,7 +22,7 @@ export async function GET(
       );
     }
 
-    const { organizationId } = params;
+    const { organizationId } = await params;
 
     // Check if user is system admin or member of the organization
     const isAdmin = isSystemAdmin(session.user.role);

@@ -65,7 +65,7 @@ export default function DashboardPage() {
           </div>
           
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat, index) => (
+            {stats.map((stat) => (
               <Card key={stat.title} className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`} />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -116,7 +116,7 @@ export default function DashboardPage() {
                     { title: "Customer Registration", desc: "Handle customer registrations", color: "bg-green-500" },
                     { title: "Payment Processing", desc: "Process payment transactions", color: "bg-amber-500" },
                     { title: "Script Management", desc: "Manage game scripts and content", color: "bg-purple-500" }
-                  ].map((action, index) => (
+                  ].map((action) => (
                     <Button 
                       key={action.title}
                       variant="outline" 
@@ -152,7 +152,7 @@ export default function DashboardPage() {
                     { label: "Authentication", status: "Active", color: "text-green-600" },
                     { label: "API Status", status: "Operational", color: "text-green-600" },
                     { label: "Cache", status: "Running", color: "text-green-600" }
-                  ].map((item, index) => (
+                  ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         {item.label}
